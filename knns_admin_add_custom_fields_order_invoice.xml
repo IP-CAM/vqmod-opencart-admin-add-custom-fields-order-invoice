@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification
+	xmlns="https://github.com/vqmod/vqmod"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="https://github.com/vqmod/vqmod https://raw.githubusercontent.com/vqmod/vqmod/master/vqmod.xsd"
+	>
+	<id><![CDATA[[VQMOD] Add Custom Fields To Order Invoice]]></id>
+	<version>1.0.0</version>
+	<vqmver>2.6.3</vqmver>
+	<author>kanenas.net (aka Nikolas Branis) - nbran@kanenas.net</author>
+	<file path="admin/controller/sale/" name="order.php" error="log">
+		<operation error="skip">
+			<search position="before" index="2"><![CDATA[if ($order_info['invoice_no']) {]]></search>
+			<add><![CDATA[
+				// kanenas: knns_admin_add_custom_fields_order_invoice.xml (start) <<
+				// Custom Fields
+				$this->load->model('customer/custom_field');
+
+				$data['account_custom_fields'] = array();
+
+				$filter_data = array(
+					'sort'  => 'cf.sort_order',
+					'order' => 'ASC',
+				);
+
+				$custom_fields = $this->model_customer_custom_field->getCustomFields($filter_data);
+
+				foreach ($custom_fields as $custom_field) {
+					if ($custom_field['location'] == 'account' && isset($order_info['custom_field'][$custom_field['custom_field_id']])) {
+						if ($custom_field['type'] == 'select' || $custom_field['type'] == 'radio') {
+							$custom_field_value_info = $this->model_customer_custom_field->getCustomFieldValue($order_info['custom_field'][$custom_field['custom_field_id']]);
+
+							if ($custom_field_value_info) {
+								$data['account_custom_fields'][] = array(
+									'name'  => $custom_field['name'],
+									'value' => $custom_field_value_info['name']
+								);
+							}
+						}
+
+						if ($custom_field['type'] == 'checkbox' && is_array($order_info['custom_field'][$custom_field['custom_field_id']])) {
+							foreach ($order_info['custom_field'][$custom_field['custom_field_id']] as $custom_field_value_id) {
+								$custom_field_value_info = $this->model_customer_custom_field->getCustomFieldValue($custom_field_value_id);
+
+								if ($custom_field_value_info) {
+									$data['account_custom_fields'][] = array(
+										'name'  => $custom_field['name'],
+										'value' => $custom_field_value_info['name']
+									);
+								}
+							}
+						}
+
+						if ($custom_field['type'] == 'text' || $custom_field['type'] == 'textarea' || $custom_field['type'] == 'file' || $custom_field['type'] == 'date' || $custom_field['type'] == 'datetime' || $custom_field['type'] == 'time') {
+							$data['account_custom_fields'][] = array(
+								'name'  => $custom_field['name'],
+								'value' => $order_info['custom_field'][$custom_field['custom_field_id']]
+							);
+						}
+
+						if ($custom_field['type'] == 'file') {
+							$upload_info = $this->model_tool_upload->getUploadByCode($order_info['custom_field'][$custom_field['custom_field_id']]);
+
+							if ($upload_info) {
+								$data['account_custom_fields'][] = array(
+									'name'  => $custom_field['name'],
+									'value' => $upload_info['name']
+								);
+							}
+						}
+					}
+				}
+
+				// Custom fields
+				$data['payment_custom_fields'] = array();
+
+				foreach ($custom_fields as $custom_field) {
+					if ($custom_field['location'] == 'address' && isset($order_info['payment_custom_field'][$custom_field['custom_field_id']])) {
+						if ($custom_field['type'] == 'select' || $custom_field['type'] == 'radio') {
+							$custom_field_value_info = $this->model_customer_custom_field->getCustomFieldValue($order_info['payment_custom_field'][$custom_field['custom_field_id']]);
+
+							if ($custom_field_value_info) {
+								$data['payment_custom_fields'][] = array(
+									'name'  => $custom_field['name'],
+									'value' => $custom_field_value_info['name'],
+									'sort_order' => $custom_field['sort_order']
+								);
+							}
+						}
+
+						if ($custom_field['type'] == 'checkbox' && is_array($order_info['payment_custom_field'][$custom_field['custom_field_id']])) {
+							foreach ($order_info['payment_custom_field'][$custom_field['custom_field_id']] as $custom_field_value_id) {
+								$custom_field_value_info = $this->model_customer_custom_field->getCustomFieldValue($custom_field_value_id);
+
+								if ($custom_field_value_info) {
+									$data['payment_custom_fields'][] = array(
+										'name'  => $custom_field['name'],
+										'value' => $custom_field_value_info['name'],
+										'sort_order' => $custom_field['sort_order']
+									);
+								}
+							}
+						}
+
+						if ($custom_field['type'] == 'text' || $custom_field['type'] == 'textarea' || $custom_field['type'] == 'file' || $custom_field['type'] == 'date' || $custom_field['type'] == 'datetime' || $custom_field['type'] == 'time') {
+							$data['payment_custom_fields'][] = array(
+								'name'  => $custom_field['name'],
+								'value' => $order_info['payment_custom_field'][$custom_field['custom_field_id']],
+								'sort_order' => $custom_field['sort_order']
+							);
+						}
+
+						if ($custom_field['type'] == 'file') {
+							$upload_info = $this->model_tool_upload->getUploadByCode($order_info['payment_custom_field'][$custom_field['custom_field_id']]);
+
+							if ($upload_info) {
+								$data['payment_custom_fields'][] = array(
+									'name'  => $custom_field['name'],
+									'value' => $upload_info['name'],
+									'sort_order' => $custom_field['sort_order']
+								);
+							}
+						}
+					}
+				}
+
+				// Shipping
+				$data['shipping_custom_fields'] = array();
+
+				foreach ($custom_fields as $custom_field) {
+					if ($custom_field['location'] == 'address' && isset($order_info['shipping_custom_field'][$custom_field['custom_field_id']])) {
+						if ($custom_field['type'] == 'select' || $custom_field['type'] == 'radio') {
+							$custom_field_value_info = $this->model_customer_custom_field->getCustomFieldValue($order_info['shipping_custom_field'][$custom_field['custom_field_id']]);
+
+							if ($custom_field_value_info) {
+								$data['shipping_custom_fields'][] = array(
+									'name'  => $custom_field['name'],
+									'value' => $custom_field_value_info['name'],
+									'sort_order' => $custom_field['sort_order']
+								);
+							}
+						}
+
+						if ($custom_field['type'] == 'checkbox' && is_array($order_info['shipping_custom_field'][$custom_field['custom_field_id']])) {
+							foreach ($order_info['shipping_custom_field'][$custom_field['custom_field_id']] as $custom_field_value_id) {
+								$custom_field_value_info = $this->model_customer_custom_field->getCustomFieldValue($custom_field_value_id);
+
+								if ($custom_field_value_info) {
+									$data['shipping_custom_fields'][] = array(
+										'name'  => $custom_field['name'],
+										'value' => $custom_field_value_info['name'],
+										'sort_order' => $custom_field['sort_order']
+									);
+								}
+							}
+						}
+
+						if ($custom_field['type'] == 'text' || $custom_field['type'] == 'textarea' || $custom_field['type'] == 'file' || $custom_field['type'] == 'date' || $custom_field['type'] == 'datetime' || $custom_field['type'] == 'time') {
+							$data['shipping_custom_fields'][] = array(
+								'name'  => $custom_field['name'],
+								'value' => $order_info['shipping_custom_field'][$custom_field['custom_field_id']],
+								'sort_order' => $custom_field['sort_order']
+							);
+						}
+
+						if ($custom_field['type'] == 'file') {
+							$upload_info = $this->model_tool_upload->getUploadByCode($order_info['shipping_custom_field'][$custom_field['custom_field_id']]);
+
+							if ($upload_info) {
+								$data['shipping_custom_fields'][] = array(
+									'name'  => $custom_field['name'],
+									'value' => $upload_info['name'],
+									'sort_order' => $custom_field['sort_order']
+								);
+							}
+						}
+					}
+				}
+				// kanenas: knns_admin_add_custom_fields_order_invoice.xml (end) <<
+			]]></add>
+		</operation>
+	</file>
+	<file path="admin/view/template/sale/" name="order_invoice.tpl" error="log">
+		<operation error="skip">
+			<search position="before" index="3"><![CDATA[<table class="table table-bordered">]]></search>
+			<add><![CDATA[
+    <?php // kanenas: knns_admin_add_custom_fields_order_invoice.xml (start) << ?>
+    <?php if ($account_custom_fields) { ?>
+    <table class="table table-bordered">
+      <tbody>
+      <?php foreach ($account_custom_fields as $custom_field) { ?>
+        <tr>
+          <td style="font-weight: bold; width: 50%;"><?php echo $custom_field['name']; ?></td>
+          <td style="width: 50%;"><?php echo $custom_field['value']; ?></td>
+        </tr>
+      <?php } ?>
+      </tbody>
+    </table>
+    <?php } ?>
+    <?php // kanenas: knns_admin_add_custom_fields_order_invoice.xml (end) << ?>
+			]]></add>
+		</operation>
+	</file>
+</modification>
